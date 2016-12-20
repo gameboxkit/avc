@@ -1,0 +1,52 @@
+NET "clk"         LOC = "B8";    # Sch name = GCLK0
+
+##### CPU Interface
+
+NET "PHI2" LOC="L15";
+NET "CSn" LOC="K12";
+NET "VBLK" LOC = "M14";
+
+NET "CPU_A[0]" LOC="J12";
+NET "CPU_A[1]" LOC="H16";
+NET "CPU_A[10]" LOC="G16";
+NET "CPU_A[2]" LOC="G13";
+NET "CPU_A[3]" LOC="F14";
+NET "CPU_A[11]" LOC="J16";
+NET "CPU_A[4]" LOC="H15";
+NET "CPU_A[9]" LOC="G15";
+
+NET "CPU_A[5]" LOC="U18";
+NET "CPU_A[8]" LOC="T17";
+NET "CPU_A[6]" LOC="T18";
+NET "CPU_A[13]" LOC="R15";
+NET "CPU_A[7]" LOC="R16";
+NET "CPU_A[14]" LOC="R18";
+NET "CPU_A[12]" LOC="P17";
+NET "CPU_A[15]" LOC="M13";
+
+NET "CPU_D[8]" LOC="L17";
+NET "CPU_D[7]" LOC="J13";
+NET "CPU_D[0]" LOC="K14";
+NET "CPU_D[6]" LOC="M18";
+NET "CPU_D[1]" LOC="K15";
+NET "CPU_D[5]" LOC="N18";
+NET "CPU_D[2]" LOC="J15";
+NET "CPU_D[4]" LOC="P18";
+NET "CPU_D[3]" LOC="J14";
+
+# RGB output
+
+NET "HSYNC" LOC="T4";
+NET "VSYNC" LOC="U3";
+
+NET "RED[2]" LOC="R8";
+NET "RED[1]" LOC="T8";
+NET "RED[0]" LOC="R9";
+
+NET "GREEN[2]" LOC="P6";
+NET "GREEN[1]" LOC="P8";
+NET "GREEN[1]" LOC="N8";
+
+NET "BLUE[2]" LOC="U4";
+NET "BLUE[1]" LOC="U5";
+NET "BLUE[0]" LOC="R4";			# XXX - DUMMY
