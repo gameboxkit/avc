@@ -12,7 +12,6 @@ module CPU_INTERFACE (
 	output reg W
 );
 
-reg SET;
 reg[4:0] PHI2_sample;
 
 always @ (posedge CLK)
@@ -78,11 +77,11 @@ always @ (posedge DOTCLK)
 			end
 	
 		HSYNC <= 1;
-		VSYNC <= 0; 
+		VSYNC <= 0;  
 		BLANK <= 1;
 		VBLANK <= 1;
 		
-		if ((YCNT_4 >= 411) && (YCNT_4 <= 412)) VSYNC <= 1; 
+		if ((YCNT_4 >= 411) && (YCNT_4 <= 412)) VSYNC <= 1;  
 		if ((XCNT_4 >= 327) && (XCNT_4 <= 374)) HSYNC <= 0;
 		
 		if (YCNT_4 < 400) 
@@ -145,7 +144,7 @@ module MAP (
 		
 	input W,
 	input [11:0] A,
-	input [8:0] D,
+	input [7:0] D,
 	
 	output[7:0] TILE,
 	output reg[2:0] TILE_X,
@@ -308,8 +307,8 @@ module SPRITERAM (
 	input DOTCLK,
 	
 	input W,
-	input [12:0] A,
-	input [3:0] D,
+	input [11:0] A,
+	input [7:0] D,
 
 	input [12:0] ADDR,
 	input IN_VISIBLE,
@@ -318,46 +317,46 @@ module SPRITERAM (
 	output reg VISIBLE
 );
 
-reg[6:0] COLOR_LATCH;
+reg[5:0] COLOR_LATCH;
 
-assign COLOR[10:4] = COLOR_LATCH;
+assign COLOR[10:4] = { 1'b1, COLOR_LATCH };
 
 always @ (posedge DOTCLK) 
 	begin
 		VISIBLE <= IN_VISIBLE;
-		COLOR_LATCH <= { 1'b1, ADDR[12:7] };
+		COLOR_LATCH <= { ADDR[12:7] };
 	end
+	
+RAMB16_S2_S4 ram0 (
+   .WEB(W),       // Port B Write Enable Input
+   .ADDRB(A),  	// Port B 12-bit Address Input
+   .CLKB(CLK),    // Port B Clock
+   .DIB(D[3:0]),  // Port B 4-bit Data Input
+   .ENB(W),       // Port B RAM Enable Input
+   .SSRB(0),      // Port B Synchronous Set/Reset Input
 
-RAMB16_S2_S2 bits10 (
-      .DOB(COLOR[1:0]),      	
-      .ADDRB(ADDR),  	
-      .CLKB(DOTCLK),    		
-      .ENB(1),      				
-      .SSRB(0),    			
-      .WEB(0),       	
-
-		.ENA(W),				
-		.CLKA(CLK),
-		.WEA(W),
-		.ADDRA(A),
-		.DIA(D[1:0]),
-      .SSRA(0)   
+   .CLKA(DOTCLK),  
+   .ENA(1),     
+   .SSRA(0),    
+   .DOA(COLOR[1:0]),
+   .WEA(0),     
+   .ADDRA(ADDR)
 );
 
-RAMB16_S2_S2 bits32 (
-      .DOB(COLOR[3:2]),      	
-      .ADDRB(ADDR),  	
-      .CLKB(DOTCLK),    		
-      .ENB(1),      				
-      .SSRB(0),    			
-      .WEB(0),       	
+RAMB16_S2_S4 ram1 (
+   .WEB(W),       // Port B Write Enable Input
+   .ADDRB(A),  	// Port B 12-bit Address Input
+   .CLKB(CLK),    // Port B Clock
+   .DIB(D[7:4]),  // Port B 4-bit Data Input
+   .ENB(W),       // Port B RAM Enable Input
+   .SSRB(0),      // Port B Synchronous Set/Reset Input
 
-		.ENA(W),				
-		.CLKA(CLK),
-		.WEA(W),
-		.ADDRA(A),
-		.DIA(D[3:2]),
-      .SSRA(0)   
+   .CLKA(DOTCLK),  
+   .ENA(1),     
+   .SSRA(0),    
+   .DOA(COLOR[3:2]),
+   .WEA(0),     
+   .ADDRA(ADDR)
 );
 
 endmodule
@@ -380,157 +379,41 @@ module TILERAM (
 	output FOREGROUND
 );
 
-assign COLOR[10] = 1'b0;
 
-reg[1:0] HICOLOR;
+reg[2:0] HITILE;
+wire[7:0] OUT[0:7];
+wire OUTF[0:7];
 
-assign COLOR[9:8] = HICOLOR;
+assign COLOR = { 1'b0, HITILE[2:1], OUT[HITILE] };
+assign FOREGROUND = OUTF[HITILE];
 
-always @ (posedge DOTCLK) HICOLOR <= { TILE[7:6] };
+wire W0 = W & (A[13:11] == 3'b000);
+wire W1 = W & (A[13:11] == 3'b001);
+wire W2 = W & (A[13:11] == 3'b010);
+wire W3 = W & (A[13:11] == 3'b011);
+wire W4 = W & (A[13:11] == 3'b100);
+wire W5 = W & (A[13:11] == 3'b101);
+wire W6 = W & (A[13:11] == 3'b110);
+wire W7 = W & (A[13:11] == 3'b111);
 
-RAMB16_S1_S1 bit0 (
-      .DOB(COLOR[0]),      	
-      .ADDRB( { TILE, TILE_Y, TILE_X} ),  	
-      .CLKB(DOTCLK),    		
-      .ENB(1),      				
-      .SSRB(0),    			
-      .WEB(0),       	
+always @ (posedge DOTCLK) HITILE <= { TILE[7:5] };
 
-		.ENA(W),				
-		.CLKA(CLK),
-		.WEA(W),
-		.ADDRA(A),
-		.DIA(D[0]),
-      .SSRA(0)   
-);
-
-RAMB16_S1_S1 bit1 (
-      .DOB(COLOR[1]),      	
-      .ADDRB( { TILE, TILE_Y, TILE_X} ),  	
-      .CLKB(DOTCLK),    		
-      .ENB(1),      				
-      .SSRB(0),    			
-      .WEB(0),       	
-
-		.ENA(W),				
-		.CLKA(CLK),
-		.WEA(W),
-		.ADDRA(A),
-		.DIA(D[1]),
-      .SSRA(0)   
-);
-
-RAMB16_S1_S1 bit2 (
-      .DOB(COLOR[2]),      	
-      .ADDRB( { TILE, TILE_Y, TILE_X} ),  	
-      .CLKB(DOTCLK),    		
-      .ENB(1),      				
-      .SSRB(0),    			
-      .WEB(0),       	
-
-		.ENA(W),				
-		.CLKA(CLK),
-		.WEA(W),
-		.ADDRA(A),
-		.DIA(D[2]),
-      .SSRA(0)   
-);
-
-RAMB16_S1_S1 bit3 (
-      .DOB(COLOR[3]),      	
-      .ADDRB( { TILE, TILE_Y, TILE_X} ),  	
-      .CLKB(DOTCLK),    		
-      .ENB(1),      				
-      .SSRB(0),    			
-      .WEB(0),       	
-
-		.ENA(W),				
-		.CLKA(CLK),
-		.WEA(W),
-		.ADDRA(A),
-		.DIA(D[3]),
-      .SSRA(0)   
-);
-
-RAMB16_S1_S1 bit4 (
-      .DOB(COLOR[4]),      	
-      .ADDRB( { TILE, TILE_Y, TILE_X} ),  	
-      .CLKB(DOTCLK),    		
-      .ENB(1),      				
-      .SSRB(0),    			
-      .WEB(0),       	
-
-		.ENA(W),				
-		.CLKA(CLK),
-		.WEA(W),
-		.ADDRA(A),
-		.DIA(D[4]),
-      .SSRA(0)   
-);
-
-RAMB16_S1_S1 bit5 (
-      .DOB(COLOR[5]),      	
-      .ADDRB( { TILE, TILE_Y, TILE_X} ),  	
-      .CLKB(DOTCLK),    		
-      .ENB(1),      				
-      .SSRB(0),    			
-      .WEB(0),       	
-
-		.ENA(W),				
-		.CLKA(CLK),
-		.WEA(W),
-		.ADDRA(A),
-		.DIA(D[5]),
-      .SSRA(0)   
-);
-
-RAMB16_S1_S1 bit6 (
-      .DOB(COLOR[6]),      	
-      .ADDRB( { TILE, TILE_Y, TILE_X} ),  	
-      .CLKB(DOTCLK),    		
-      .ENB(1),      				
-      .SSRB(0),    			
-      .WEB(0),       	
-
-		.ENA(W),				
-		.CLKA(CLK),
-		.WEA(W),
-		.ADDRA(A),
-		.DIA(D[6]),
-      .SSRA(0)   
-);
-
-RAMB16_S1_S1 bit7 (
-      .DOB(COLOR[7]),      	
-      .ADDRB( { TILE, TILE_Y, TILE_X} ),  	
-      .CLKB(DOTCLK),    		
-      .ENB(1),      				
-      .SSRB(0),    			
-      .WEB(0),       	
-
-		.ENA(W),				
-		.CLKA(CLK),
-		.WEA(W),
-		.ADDRA(A),
-		.DIA(D[7]),
-      .SSRA(0)   
-);
-
-RAMB16_S1_S1 bit8 (
-      .DOB(FOREGROUND),      	
-      .ADDRB( { TILE, TILE_Y, TILE_X} ),  	
-      .CLKB(DOTCLK),    		
-      .ENB(1),      				
-      .SSRB(0),    			
-      .WEB(0),       	
-
-		.ENA(W),				
-		.CLKA(CLK),
-		.WEA(W),
-		.ADDRA(A),
-		.DIA(D[8]),
-      .SSRA(0)   
-);
+RAMB16_S9_S9 ram0 ( .CLKA(CLK), .ADDRA(A[10:0]), .DIA(D[7:0]), .DIPA(D[8]), .ENA(W0),	.SSRA(0), .WEA(W0), 
+	.DOB(OUT[0]), .DOPB(OUTF[0]), .ADDRB( { TILE[4:0], TILE_Y, TILE_X }), .CLKB(DOTCLK), .ENB(1), .WEB(0), .SSRB(0) );
+RAMB16_S9_S9 ram1 ( .CLKA(CLK), .ADDRA(A[10:0]), .DIA(D[7:0]), .DIPA(D[8]), .ENA(W1),	.SSRA(0), .WEA(W1), 
+	.DOB(OUT[1]), .DOPB(OUTF[1]), .ADDRB( { TILE[4:0], TILE_Y, TILE_X }), .CLKB(DOTCLK), .ENB(1), .WEB(0), .SSRB(0) );
+RAMB16_S9_S9 ram2 ( .CLKA(CLK), .ADDRA(A[10:0]), .DIA(D[7:0]), .DIPA(D[8]), .ENA(W2),	.SSRA(0), .WEA(W2), 
+	.DOB(OUT[2]), .DOPB(OUTF[2]), .ADDRB( { TILE[4:0], TILE_Y, TILE_X }), .CLKB(DOTCLK), .ENB(1), .WEB(0), .SSRB(0) );
+RAMB16_S9_S9 ram3 ( .CLKA(CLK), .ADDRA(A[10:0]), .DIA(D[7:0]), .DIPA(D[8]), .ENA(W3),	.SSRA(0), .WEA(W3), 
+	.DOB(OUT[3]), .DOPB(OUTF[3]), .ADDRB( { TILE[4:0], TILE_Y, TILE_X }), .CLKB(DOTCLK), .ENB(1), .WEB(0), .SSRB(0) );
+RAMB16_S9_S9 ram4 ( .CLKA(CLK), .ADDRA(A[10:0]), .DIA(D[7:0]), .DIPA(D[8]), .ENA(W4),	.SSRA(0), .WEA(W4), 
+	.DOB(OUT[4]), .DOPB(OUTF[4]), .ADDRB( { TILE[4:0], TILE_Y, TILE_X }), .CLKB(DOTCLK), .ENB(1), .WEB(0), .SSRB(0) );
+RAMB16_S9_S9 ram5 ( .CLKA(CLK), .ADDRA(A[10:0]), .DIA(D[7:0]), .DIPA(D[8]), .ENA(W5),	.SSRA(0), .WEA(W5), 
+	.DOB(OUT[5]), .DOPB(OUTF[5]), .ADDRB( { TILE[4:0], TILE_Y, TILE_X }), .CLKB(DOTCLK), .ENB(1), .WEB(0), .SSRB(0) );
+RAMB16_S9_S9 ram6 ( .CLKA(CLK), .ADDRA(A[10:0]), .DIA(D[7:0]), .DIPA(D[8]), .ENA(W6),	.SSRA(0), .WEA(W6), 
+	.DOB(OUT[6]), .DOPB(OUTF[6]), .ADDRB( { TILE[4:0], TILE_Y, TILE_X }), .CLKB(DOTCLK), .ENB(1), .WEB(0), .SSRB(0) );
+RAMB16_S9_S9 ram7 ( .CLKA(CLK), .ADDRA(A[10:0]), .DIA(D[7:0]), .DIPA(D[8]), .ENA(W7),	.SSRA(0), .WEA(W7), 
+	.DOB(OUT[7]), .DOPB(OUTF[7]), .ADDRB( { TILE[4:0], TILE_Y, TILE_X }), .CLKB(DOTCLK), .ENB(1), .WEB(0), .SSRB(0) );
 
 endmodule
 
@@ -624,20 +507,21 @@ CPU_INTERFACE cpu_interface (
 	.W(W)
 );
 
-wire W_MAP = (A[15:12] == 4'b0100) & W;
-wire W_TILE = (A[15:14] == 2'b00) & W;
-wire W_PALETTE = (A[15:12] == 4'b1111) & W;
-wire W_SPRITERAM = (A[15:13] == 3'b100) & W;
-wire W_SPRITE = (A[15:12] == 4'b1100) & W;
+wire W_SPRITE = (A[15] == 0) & W;					/* sprite blocks = $0000-$7FFF */
+wire W_TILE = (A[15:14] == 2'b10) & W;				/* tile RAM = $8000-$BFFF */
+wire W_MAP = (A[15:12] == 4'b1100) & W;			/* map RAM = $C000-$CFFF */
+wire W_PALETTE = (A[15:12] == 4'b1101) & W;		/* palette RAM = $D000-$DFFF */
+wire W_SPRITERAM = (A[15:12] == 4'b1110) & W;	/* sprite RAM = $E000-$EFFF */
+/* W_AUDIO = (A[15:12] == 4'b1111) & W; */		/* audio = $F000-FFFF */
 
-wire W_SPRITEBLOCK0 = W_SPRITE & (A[10:8] == 3'b000);
-wire W_SPRITEBLOCK1 = W_SPRITE & (A[10:8] == 3'b001);
-wire W_SPRITEBLOCK2 = W_SPRITE & (A[10:8] == 3'b010);
-wire W_SPRITEBLOCK3 = W_SPRITE & (A[10:8] == 3'b011);
-wire W_SPRITEBLOCK4 = W_SPRITE & (A[10:8] == 3'b100);
-wire W_SPRITEBLOCK5 = W_SPRITE & (A[10:8] == 3'b101);
-wire W_SPRITEBLOCK6 = W_SPRITE & (A[10:8] == 3'b110);
-wire W_SPRITEBLOCK7 = W_SPRITE & (A[10:8] == 3'b111);
+wire W_SPRITEBLOCK0 = W_SPRITE & (A[13:11] == 3'b000);
+wire W_SPRITEBLOCK1 = W_SPRITE & (A[13:11] == 3'b001);
+wire W_SPRITEBLOCK2 = W_SPRITE & (A[13:11] == 3'b010);
+wire W_SPRITEBLOCK3 = W_SPRITE & (A[13:11] == 3'b011);
+wire W_SPRITEBLOCK4 = W_SPRITE & (A[13:11] == 3'b100);
+wire W_SPRITEBLOCK5 = W_SPRITE & (A[13:11] == 3'b101);
+wire W_SPRITEBLOCK6 = W_SPRITE & (A[13:11] == 3'b110);
+wire W_SPRITEBLOCK7 = W_SPRITE & (A[13:11] == 3'b111);
 
 wire[8:0] MAP_X, SPRITE_X;
 wire[7:0] MAP_Y, SPRITE_Y;
@@ -688,21 +572,21 @@ TILERAM tileram (
 
 wire[9:0] 	ADDR0, ADDR1, ADDR2, ADDR3, ADDR4, ADDR5, ADDR6, ADDR7;
 				
-SPRITEBLOCK spriteblock0 (.DOTCLK(DOTCLK), .CLK(CLK),	.W(W_SPRITEBLOCK0), .A(A[7:0]), .D(D[8:0]), .X(SPRITE_X), .Y(SPRITE_Y),
+SPRITEBLOCK spriteblock0 (.DOTCLK(DOTCLK), .CLK(CLK),	.W(W_SPRITEBLOCK0), .A( { A[10:8], A[4:0] } ), .D(D[8:0]), .X(SPRITE_X), .Y(SPRITE_Y),
 	.ADDR(ADDR0), .VISIBLE(VISIBLE0));
-SPRITEBLOCK spriteblock1 (.DOTCLK(DOTCLK), .CLK(CLK),	.W(W_SPRITEBLOCK1), .A(A[7:0]), .D(D[8:0]), .X(SPRITE_X), .Y(SPRITE_Y),
+SPRITEBLOCK spriteblock1 (.DOTCLK(DOTCLK), .CLK(CLK),	.W(W_SPRITEBLOCK1), .A({ A[10:8], A[4:0] }), .D(D[8:0]), .X(SPRITE_X), .Y(SPRITE_Y),
 	.ADDR(ADDR1), .VISIBLE(VISIBLE1));
-SPRITEBLOCK spriteblock2 (.DOTCLK(DOTCLK), .CLK(CLK),	.W(W_SPRITEBLOCK2), .A(A[7:0]), .D(D[8:0]), .X(SPRITE_X), .Y(SPRITE_Y),
+SPRITEBLOCK spriteblock2 (.DOTCLK(DOTCLK), .CLK(CLK),	.W(W_SPRITEBLOCK2), .A({ A[10:8], A[4:0] }), .D(D[8:0]), .X(SPRITE_X), .Y(SPRITE_Y),
 	.ADDR(ADDR2), .VISIBLE(VISIBLE2));
-SPRITEBLOCK spriteblock3 (.DOTCLK(DOTCLK), .CLK(CLK),	.W(W_SPRITEBLOCK3), .A(A[7:0]), .D(D[8:0]), .X(SPRITE_X), .Y(SPRITE_Y),
+SPRITEBLOCK spriteblock3 (.DOTCLK(DOTCLK), .CLK(CLK),	.W(W_SPRITEBLOCK3), .A({ A[10:8], A[4:0] }), .D(D[8:0]), .X(SPRITE_X), .Y(SPRITE_Y),
 	.ADDR(ADDR3), .VISIBLE(VISIBLE3));
-SPRITEBLOCK spriteblock4 (.DOTCLK(DOTCLK), .CLK(CLK),	.W(W_SPRITEBLOCK4), .A(A[7:0]), .D(D[8:0]), .X(SPRITE_X), .Y(SPRITE_Y),
+SPRITEBLOCK spriteblock4 (.DOTCLK(DOTCLK), .CLK(CLK),	.W(W_SPRITEBLOCK4), .A({ A[10:8], A[4:0] }), .D(D[8:0]), .X(SPRITE_X), .Y(SPRITE_Y),
 	.ADDR(ADDR4), .VISIBLE(VISIBLE4));
-SPRITEBLOCK spriteblock5 (.DOTCLK(DOTCLK), .CLK(CLK),	.W(W_SPRITEBLOCK5), .A(A[7:0]), .D(D[8:0]), .X(SPRITE_X), .Y(SPRITE_Y),
+SPRITEBLOCK spriteblock5 (.DOTCLK(DOTCLK), .CLK(CLK),	.W(W_SPRITEBLOCK5), .A({ A[10:8], A[4:0] }), .D(D[8:0]), .X(SPRITE_X), .Y(SPRITE_Y),
 	.ADDR(ADDR5), .VISIBLE(VISIBLE5));
-SPRITEBLOCK spriteblock6 (.DOTCLK(DOTCLK), .CLK(CLK),	.W(W_SPRITEBLOCK6), .A(A[7:0]), .D(D[8:0]), .X(SPRITE_X), .Y(SPRITE_Y),
+SPRITEBLOCK spriteblock6 (.DOTCLK(DOTCLK), .CLK(CLK),	.W(W_SPRITEBLOCK6), .A({ A[10:8], A[4:0] }), .D(D[8:0]), .X(SPRITE_X), .Y(SPRITE_Y),
 	.ADDR(ADDR6), .VISIBLE(VISIBLE6));
-SPRITEBLOCK spriteblock7 (.DOTCLK(DOTCLK), .CLK(CLK),	.W(W_SPRITEBLOCK7), .A(A[7:0]), .D(D[8:0]), .X(SPRITE_X), .Y(SPRITE_Y),
+SPRITEBLOCK spriteblock7 (.DOTCLK(DOTCLK), .CLK(CLK),	.W(W_SPRITEBLOCK7), .A({ A[10:8], A[4:0] }), .D(D[8:0]), .X(SPRITE_X), .Y(SPRITE_Y),
 	.ADDR(ADDR7), .VISIBLE(VISIBLE7));
 
 wire[12:0] SPRITE_ADDR;
@@ -730,15 +614,15 @@ SPRITERAM spriteram (
 	.DOTCLK(DOTCLK),
 	
 	.W(W_SPRITERAM),
-	.A(A[12:0]),
-	.D(D[3:0]),
+	.A(A[11:0]),
+	.D(D[7:0]),
 
 	.ADDR(SPRITE_ADDR),
 	.IN_VISIBLE(SPRITE_VISIBLE),
 	
 	.COLOR(SPRITE_COLOR),
 	.VISIBLE(VISIBLE)
-);
+); 
 
 wire[8:0] PALETTE_OUT;
 
@@ -754,7 +638,7 @@ PALETTE palette (
 	.VISIBLE(VISIBLE),
 	.OUT(PALETTE_OUT)
 );
-
+ 
 
 assign RED = BLANK ? 0 : PALETTE_OUT[8:6];
 assign GREEN = BLANK ? 0 : PALETTE_OUT[5:3];
