@@ -144,7 +144,7 @@ module MAP (
 		
 	input W,
 	input [11:0] A,
-	input [7:0] D,
+	input [8:0] D,
 	
 	output[7:0] TILE,
 	output reg[2:0] TILE_X,
@@ -174,8 +174,8 @@ RAMB16_S9_S9 mapram (
 	.SSRB(0)
 );
 
-reg[7:0] XOFS;
-reg[5:0] YOFS;
+reg[8:0] XOFS;
+reg[7:0] YOFS;
 
 wire[8:0] XADJ = X + XOFS;
 wire[7:0] YADJ = Y + YOFS;
@@ -184,8 +184,8 @@ assign MAP_A = { YADJ[7:3], XADJ[8:3] };
 
 always @ (posedge CLK) 
 	begin
-		if (W_XOFS) XOFS <= D[7:0];
-		if (W_YOFS) YOFS <= D[5:0];
+		if (W_XOFS) XOFS <= D[8:0];
+		if (W_YOFS) YOFS <= D[7:0];
 	end
 
 always @ (posedge DOTCLK)
@@ -263,6 +263,7 @@ wire W_VISIBLE = W & A[4];
 
 reg[8:0] POS_X;
 reg[7:0] POS_Y;
+reg ON;
 
 wire[8:0] SPRITE_X = X - POS_X;
 wire[7:0] SPRITE_Y = Y - POS_Y;
@@ -288,14 +289,18 @@ RAM16X1D mask7 (.WCLK(CLK), .WE(W_VISIBLE), .A0(A[0]), .A1(A[1]), .A2(A[2]), .A3
 always @ (posedge CLK)
 	begin
 		if (W_X) POS_X <= D[8:0];
-		if (W_Y) POS_Y <= D[7:0];
+		if (W_Y) 
+			begin
+				POS_Y <= D[7:0];
+				ON <= D[8];
+			end
 	end
 	
 always @ (posedge DOTCLK)
 	begin
 		OUT <= { SPRITE_Y[3:0], SPRITE_X[2:0] };
 		VISIBLE <= 0;
-		if ((SPRITE_Y < 16) && (SPRITE_X < 8))	VISIBLE <= MASK[SPRITE_X[2:0]];
+		if ((SPRITE_Y < 16) && (SPRITE_X < 8))	VISIBLE <= ON & MASK[SPRITE_X[2:0]];
 	end
 
 endmodule
@@ -547,7 +552,7 @@ MAP map (
 	.DOTCLK(DOTCLK),
 	.W(W_MAP),
 	.A(A[11:0]),
-	.D(D[7:0]),
+	.D(D[8:0]),
 	.X(MAP_X),
 	.Y(MAP_Y),
 	.TILE(TILE),
